@@ -65,12 +65,12 @@ The following yaml-file is an example for running **LAM** and **pzen/ldap** in a
       lam:
         image: ldapaccountmanager/lam:7.2
         environment:
-          - LDAP_DOMAIN=demo.net
-          - LDAP_BASE_DN=o=DEMO,dc=demo,dc=net
-          - LDAP_USERS_DN=ou=users,o=DEMO,dc=demo,dc=net
-          - LDAP_GROUPS_DN=ou=groups,o=DEMO,dc=demo,dc=net
-          - LDAP_SERVER=ldap://ldap:389
-          - LDAP_USER=cn=admin,o=DEMO,dc=demo,dc=net
+          LDAP_DOMAIN: demo.net
+          LDAP_BASE_DN: o=DEMO,dc=demo,dc=net
+          LDAP_USERS_DN: ou=users,o=DEMO,dc=demo,dc=net
+          LDAP_GROUPS_DN: ou=groups,o=DEMO,dc=demo,dc=net
+          LDAP_SERVER: ldap://ldap:389
+          LDAP_USER: cn=admin,o=DEMO,dc=demo,dc=net
         ports:
           - 8080:80
 
