@@ -21,7 +21,7 @@ services:
       LDAP_BASE_DN: o=DEMO,dc=demo,dc=net
       LDAP_SERVER: ldap://ldap:389
       LDAP_USER: cn=admin,o=DEMO,dc=demo,dc=net
-      LDAP_USERS_DN: ou=people,o=DEMO,dc=demo,dc=net
+      LDAP_USERS_DN: ou=users,o=DEMO,dc=demo,dc=net
       LDAP_GROUPS_DN: ou=groups,o=DEMO,dc=demo,dc=net
     ports:
       - 8080:80
