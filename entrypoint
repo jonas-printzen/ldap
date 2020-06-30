@@ -1,0 +1,125 @@
+#!/bin/bash
+#
+# Auto-conf and startup-script OpenLDAP
+#
+# @author: Jonas Pirintzén
+#
+
+echo "Entry!"
+
+function assert_empty() {
+  path=$1
+  user=$2
+  group=$3
+  mkdir -p $path && chown $user:$group $path && rm -rf $path/*
+}
+
+# If no config in place, we must have config-data
+if ! [ -d /srv/slapd.d/cn=config ]; then
+  echo "Attempting auto-config!"
+  # Check that enought ENV is present
+  [ -z "${LDAP_DOMAIN}" ] && exit -1
+  [ -z "${LDAP_PASSWORD}" ] && exit -1
+
+  # Defaults if not set
+  LDAP_ADMIN=${LDAP_ADMIN:-admin}
+  LDAP_USERS=${LDAP_USERS:-users}
+  LDAP_GROUPS=${LDAP_GROUPS:-groups}
+
+  echo "Checking password ..."
+
+  if ! [[ $LDAP_PASSWORD == \{* ]]; then
+    echo "Encrypting password ..."
+    LDAP_PASSWORD=$(slappasswd -s ${LDAP_PASSWORD})
+  else
+    echo "Password already encrypted!"
+  fi
+
+  # Assert empty directories owned by 'ldap'
+  assert_empty /srv/data ldap ldap
+  assert_empty /srv/slapd.d ldap ldap
+
+  IFS="." TMP=${LDAP_DOMAIN}
+  SUFFIX=""
+  for dc in ${TMP}; do
+    if [ -z "${SUFFIX}" ]; then
+      SUFFIX="dc=${dc}"
+    else
+      SUFFIX="${SUFFIX},dc=${dc}"
+    fi
+  done
+
+  echo "Using SUFFIX: $SUFFIX"
+
+  # Is there an ORG?
+  if ! [ -z "$LDAP_ORG" ]; then
+    SUFFIX="o=${LDAP_ORG},${SUFFIX}"
+  fi
+
+  # This config will be stored in /srv/slapd.d (see slapd -F)
+  cat << EOF > /etc/openldap/slapd.ldif
+# Start of the configuration
+dn: cn=config
+objectClass: olcGlobal
+cn: config
+olcPidFile: /run/slapd.pid
+olcArgsFile: /run/slapd.args
+
+# The module for MDB storage
+dn: cn=module,cn=config
+objectClass: olcModuleList
+cn: module
+olcModulepath:	/usr/lib/openldap
+olcModuleload:	back_mdb.so
+
+# The schema config-base needed before populating with includes below
+dn: cn=schema,cn=config
+objectClass: olcSchemaConfig
+cn: schema
+
+# Order is important ...
+include: file:///etc/openldap/schema/core.ldif
+include: file:///etc/openldap/schema/cosine.ldif
+include: file:///etc/openldap/schema/nis.ldif
+include: file:///etc/openldap/schema/inetorgperson.ldif
+
+# Frontend settings
+dn: olcDatabase=frontend,cn=config
+objectClass: olcDatabaseConfig
+objectClass: olcFrontendConfig
+olcDatabase: frontend
+
+# LMDB database, here we switch to /srv ...for the image
+dn: olcDatabase=mdb,cn=config
+objectClass: olcDatabaseConfig
+objectClass: olcMdbConfig
+olcDatabase: mdb
+olcSuffix: ${SUFFIX}
+olcRootDN: cn=${LDAP_ADMIN},${SUFFIX}
+olcRootPW: ${LDAP_PASSWORD}
+olcDbDirectory:	/srv/data
+olcDbIndex: objectClass eq
+EOF
+
+  # Here we generate config for main directory structure
+  cat << EOF > /etc/openldap/dir.ldif
+
+dn: ou=${LDAP_USERS},${SUFFIX}
+objectclass: organizationalUnit
+ou: ${LDAP_USERS}
+
+dn: ou=${LDAP_GROUPS},${SUFFIX}
+objectclass: organizationalUnit
+ou: ${LDAP_GROUPS}
+
+dn: ou=Computers,${SUFFIX}
+objectclass: organizationalUnit
+ou: Computers
+EOF
+  # This script assumes server not running ... yet!
+  slapadd -F /srv/slapd.d -n 0 -l /etc/openldap/slapd.ldif
+  slapadd -F /srv/slapd.d -l /etc/openldap/dir.ldif
+fi
+
+# Starting the server ...
+slapd -d 1 -F /srv/slapd.d

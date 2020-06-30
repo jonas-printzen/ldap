@@ -1,0 +1,31 @@
+version: '3.8'
+services:
+  ldap:
+    image: pzen/ldap
+    environment:
+      LDAP_DOMAIN: demo.net
+      LDAP_ADMIN: admin
+      LDAP_PASSWORD: changeme
+      LDAP_ORG: DEMO
+      LDAP_USERS: users
+      LDAP_GROUPS: groups
+    ports:
+      - 389:389
+    # volumes:
+    #   - ldap_vol:/srv
+
+  lam:
+    image: ldapaccountmanager/lam:7.2
+    environment:
+      LDAP_DOMAIN: demo.net
+      LDAP_BASE_DN: o=DEMO,dc=demo,dc=net
+      LDAP_SERVER: ldap://ldap:389
+      LDAP_USER: cn=admin,o=DEMO,dc=demo,dc=net
+      LDAP_USERS_DN: ou=people,o=DEMO,dc=demo,dc=net
+      LDAP_GROUPS_DN: ou=groups,o=DEMO,dc=demo,dc=net
+    ports:
+      - 8080:80
+
+# volumes:
+#   ldap_vol:
+#     ...
