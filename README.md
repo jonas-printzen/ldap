@@ -43,7 +43,7 @@ Expecting an empty **`/srv`** folder at first, the entrypoint-script will create
 
 ## Using with LAM.
 
-The following yaml-file is an example for running **LAM** and **pzen/ldap** in a docker-stack.
+The following yaml-file is an example for running **LAM** and **pzen/ldap** in a docker-stack.<br>
 <sub>**Note**! _Can also be found on the github-repo_</sub>
 
     version: '3.8'
